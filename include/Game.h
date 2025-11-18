@@ -33,6 +33,7 @@ private:
     int leftScore;
     int rightScore;
     int highScore; // only from vs-AI matches
+    int lives;
     
     sf::Font font;
     sf::Text scoreText;
