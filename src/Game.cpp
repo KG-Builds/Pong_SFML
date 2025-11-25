@@ -13,6 +13,31 @@ namespace {
     const int START_LIVES   = 3;
 }
 
+/*
+    Constructor: Game::Game()
+
+    Objective:
+        Set up the game window, initialize game objects (paddles, ball),
+        load fonts, texts, high score, and prepare the menu.
+
+    Input Parameters:
+        - None (constructor).
+
+    Return Value:
+        - None.
+
+    Side Effects:
+        - Loads font from file.
+        - Reads high score from disk.
+        - Initializes SFML window and graphical objects.
+
+    Approach:
+        - Create window and set framerate.
+        - Initialize paddles, ball, and game state.
+        - Load resources (font).
+        - Initialize UI texts.
+        - Load high score and pass it to menu.
+*/
 Game::Game()
     : window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT),
              "Pong",
@@ -61,6 +86,27 @@ Game::Game()
     menu.setHighScore(highScore);
 }
 
+
+/*
+    Function: void Game::run()
+
+    Objective:
+        Start the main game loop that processes events, updates game state,
+        and renders frames.
+
+    Input Parameters:
+        - None
+
+    Return Value:
+        - void
+
+    Side Effects:
+        - Opens and runs the game loop which continues until window closes.
+
+    Approach:
+        - Use an SFML clock to calculate delta time.
+        - Continuously call event processing, updating, and rendering.
+*/
 void Game::run() {
     sf::Clock clock;
 
@@ -73,6 +119,30 @@ void Game::run() {
     }
 }
 
+
+/*
+    Function: void Game::processEvents()
+
+    Objective:
+        Handle user input such as keyboard and mouse interactions for
+        menu, gameplay, and game over screen.
+
+    Input Parameters:
+        - None
+
+    Return Value:
+        - void
+
+    Side Effects:
+        - Changes game state (Menu → Playing → Game Over).
+        - Detects paddle movement inputs.
+        - May close the game window.
+
+    Approach:
+        - Poll events from SFML.
+        - Handle menu clicks for choosing game mode.
+        - Handle enter key to return from game over.
+*/
 void Game::processEvents() {
     sf::Event event;
 
@@ -122,20 +192,44 @@ void Game::processEvents() {
     }
 }
 
+
+/*
+    Function: void Game::update(float dt)
+
+    Objective:
+        Handle gameplay logic (paddle movement, AI, ball physics,
+        scoring, collisions, game over conditions).
+
+    Input Parameters:
+        - float dt: delta time for frame-independent movement.
+
+    Return Value:
+        - void
+
+    Side Effects:
+        - Moves paddles and ball.
+        - Updates scores and lives.
+        - Triggers game over.
+        - Modifies text UI.
+
+    Approach:
+        - Process player or AI paddle movement.
+        - Update ball and check collisions.
+        - Apply scoring rules depending on game mode.
+        - Update score display.
+        - Check for end-of-game conditions.
+*/
 void Game::update(float dt) {
     if (state != GameState::PLAYING)
         return;
 
     // ---------- Controls & AI ----------
-
     if (mode == GameMode::PLAYER_VS_PLAYER) {
-        // Player 1 (left) – W/S
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
             leftPaddle.moveUp(dt);
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
             leftPaddle.moveDown(dt);
 
-        // Player 2 (right) – Up/Down
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
             rightPaddle.moveUp(dt);
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
@@ -148,9 +242,9 @@ void Game::update(float dt) {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
             leftPaddle.moveDown(dt);
 
-        // Simple AI for right paddle
+        // AI moves right paddle to follow ball
         float ballCenterY   = ball.getBounds().top + ball.getBounds().height / 2.f;
-        float paddleCenterY = rightPaddle.getBounds().top + 50.f; // half paddle height
+        float paddleCenterY = rightPaddle.getBounds().top + 50.f;
 
         if (ballCenterY > paddleCenterY)
             rightPaddle.moveDown(dt);
@@ -161,7 +255,7 @@ void Game::update(float dt) {
     // ---------- Ball update ----------
     ball.update(dt);
 
-    // ---------- Collisions with paddles ----------
+    // ---------- Paddle collisions ----------
     if (ball.getBounds().intersects(leftPaddle.getBounds())) {
         ball.bounceX();
     }
@@ -169,37 +263,31 @@ void Game::update(float dt) {
         ball.bounceX();
     }
 
-    // ---------- Scoring logic ----------
+    // ---------- Scoring ----------
     sf::FloatRect ballBounds = ball.getBounds();
 
     if (mode == GameMode::PLAYER_VS_AI) {
-        // Ball passed left edge → you lose a life
         if (ballBounds.left + ballBounds.width < 0) {
             lives--;
             resetRound();
         }
-
-        // Ball passed right edge → you gain a point
         if (ballBounds.left > WINDOW_WIDTH) {
             leftScore++;
             resetRound();
         }
     }
-    else { // PLAYER_VS_PLAYER
-        // Left miss → right scores
+    else {
         if (ballBounds.left + ballBounds.width < 0) {
             rightScore++;
             resetRound();
         }
-
-        // Right miss → left scores
         if (ballBounds.left > WINDOW_WIDTH) {
             leftScore++;
             resetRound();
         }
     }
 
-    // ---------- Update on-screen score text ----------
+    // ---------- Update score text ----------
     if (mode == GameMode::PLAYER_VS_AI) {
         scoreText.setPosition(150.f, 15.f);
         scoreText.setString(
@@ -214,7 +302,7 @@ void Game::update(float dt) {
         );
     }
 
-    // ---------- Game Over conditions ----------
+    // ---------- Game Over ----------
     if (mode == GameMode::PLAYER_VS_AI) {
         if (lives <= 0) {
             state = GameState::GAME_OVER;
@@ -231,7 +319,7 @@ void Game::update(float dt) {
             );
         }
     }
-    else { // PvP
+    else {
         if (leftScore >= TARGET_SCORE || rightScore >= TARGET_SCORE) {
             state = GameState::GAME_OVER;
 
@@ -240,11 +328,32 @@ void Game::update(float dt) {
             else
                 gameOverText.setString("Player 2 Wins!!!");
 
-            gameOverHighScoreText.setString(""); // no highscore for PvP
+            gameOverHighScoreText.setString("");
         }
     }
 }
 
+
+/*
+    Function: void Game::render()
+
+    Objective:
+        Draw the menu, gameplay, or game over screen depending on the current state.
+
+    Input Parameters:
+        - None
+
+    Return Value:
+        - void
+
+    Side Effects:
+        - Clears and updates the contents of the window each frame.
+
+    Approach:
+        - Clear the screen.
+        - Draw appropriate objects depending on state.
+        - Display updated frame.
+*/
 void Game::render() {
     window.clear(sf::Color::Black);
 
@@ -267,6 +376,27 @@ void Game::render() {
     window.display();
 }
 
+
+/*
+    Function: void Game::loadHighScore()
+
+    Objective:
+        Load the high score from a text file.
+
+    Input Parameters:
+        - None
+
+    Return Value:
+        - void
+
+    Side Effects:
+        - Reads from disk.
+        - Changes the highScore variable.
+
+    Approach:
+        - Open "highscore.txt"
+        - Read integer value if file exists.
+*/
 void Game::loadHighScore() {
     std::ifstream file("highscore.txt");
     highScore = 0;
@@ -276,6 +406,26 @@ void Game::loadHighScore() {
     }
 }
 
+
+/*
+    Function: void Game::saveHighScore()
+
+    Objective:
+        Save the current high score to disk.
+
+    Input Parameters:
+        - None
+
+    Return Value:
+        - void
+
+    Side Effects:
+        - Writes to disk (overwrites existing file).
+
+    Approach:
+        - Open "highscore.txt" for output.
+        - Write the highScore value.
+*/
 void Game::saveHighScore() {
     std::ofstream file("highscore.txt");
     if (file) {
@@ -283,7 +433,26 @@ void Game::saveHighScore() {
     }
 }
 
+
+/*
+    Function: void Game::resetRound()
+
+    Objective:
+        Reset the ball to the center of the screen and alternate serve direction.
+
+    Input Parameters:
+        - None
+
+    Return Value:
+        - void
+
+    Side Effects:
+        - Resets ball position.
+        - Reverses ball velocityX.
+
+    Approach:
+        - Call ball.reset() with center coordinates.
+*/
 void Game::resetRound() {
-    // Just reset ball to center, reverse X so it alternates serve
     ball.reset(WINDOW_WIDTH / 2.f, WINDOW_HEIGHT / 2.f);
 }
